@@ -173,7 +173,7 @@ bool Sample::WriteDataToFile(const std::string& path, float** data, int numSampl
    int samplerate = UserPrefs.saving_samplerate.Get();
    if (samplerate == 0)
       samplerate = GetClosestValidSampleRate(gSampleRate);
-   //TODO: Samplerate conversion so speed and such is correct.
+   //TODO: Samplerate conversion
    const auto writer = std::unique_ptr<juce::AudioFormatWriter>(
    wavFormat->createWriterFor(outputTo.release(), samplerate, channels, bitdepth, b1, 0));
    writer->writeFromFloatArrays(data, channels, numSamples);
