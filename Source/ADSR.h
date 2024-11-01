@@ -128,7 +128,7 @@ private:
    int mNextEventPointer{ 0 };
    int mSustainStage{ 0 };
    float mMaxSustain{ -1 };
-   Stage mStages[MAX_ADSR_STAGES];
+   std::vector<Stage> mStages;
    int mNumStages{ 0 };
    bool mHasSustainStage{ false };
    bool mFreeReleaseLevel{ false };
