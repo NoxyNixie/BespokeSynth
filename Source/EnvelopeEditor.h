@@ -144,5 +144,5 @@ private:
    FloatSlider* mMaxSustainSlider{ nullptr };
    Checkbox* mFreeReleaseLevelCheckbox{ nullptr };
    PatchCableSource* mTargetCable{ nullptr };
-   std::array<StageControls, 10> mStageControls{};
+   std::vector<StageControls> mStageControls{};
 };

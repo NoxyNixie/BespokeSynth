@@ -31,16 +31,9 @@
 
 void ::ADSR::Set(float a, float d, float s, float r, float h /*=-1*/)
 {
-   mStages[0].target = 1;
-   mStages[0].time = MAX(a, 1);
-   mStages[0].curve = 0;
-   mStages[1].target = MAX(s, .0001f);
-   mStages[1].time = MAX(d, 1);
-   mStages[1].curve = -.5f;
-   mStages[2].target = 0;
-   mStages[2].time = MAX(r, 1);
-   mStages[2].curve = -.5f;
-   mNumStages = 3;
+   mStages.emplace_back(1, MAX(a, 1), 0);
+   mStages.emplace_back(MAX(s, .0001f), MAX(d, 1), -.5f);
+   mStages.emplace_back(0, MAX(r, 1), -.5f);
    mSustainStage = 1;
    mMaxSustain = h;
    mHasSustainStage = true;
@@ -48,9 +41,7 @@ void ::ADSR::Set(float a, float d, float s, float r, float h /*=-1*/)
 
 void ::ADSR::Set(const ADSR& other)
 {
-   for (int i = 0; i < other.mNumStages; ++i)
-      mStages[i] = other.mStages[i];
-   mNumStages = other.mNumStages;
+   mStages = other.mStages;
    mSustainStage = other.mSustainStage;
    mMaxSustain = other.mMaxSustain;
    mHasSustainStage = other.mHasSustainStage;
@@ -81,7 +72,7 @@ void ::ADSR::Start(double time, float target, float timeScale /*=1*/)
    if (mMaxSustain >= 0 && mHasSustainStage)
    {
       float stopTime = time;
-      for (int i = 0; i < mNumStages; ++i)
+      for (int i = 0; i < mStages.size(); ++i)
       {
          stopTime += mStages[i].time * timeScale;
          if (i == mSustainStage)
@@ -102,7 +93,7 @@ void ::ADSR::Stop(double time, bool warn /*= true*/)
    {
       if (warn)
          ofLog() << "trying to stop before we started (" << time << "<=" << e->mStartTime << ")";
-      time = e->mStartTime + .0001f; //must be after start
+      time = e->mStartTime + .0001; //must be after start
    }
    e->mStopTime = time;
 }
@@ -148,7 +139,7 @@ float ::ADSR::Value(double time, const EventInfo* e) const
    float stageStartValue;
    double stageStartTime;
    int stage = GetStage(time, stageStartTime, e);
-   if (stage == mNumStages) //done
+   if (stage == mStages.size()) //done
       return mStages[stage - 1].target;
 
    if (stage == 0)
@@ -172,7 +163,8 @@ float ::ADSR::Value(double time, const EventInfo* e) const
 
 float ::ADSR::GetStageTimeScale(int stage) const
 {
-   if (stage >= mNumStages - 1)
+   constexpr int  tt = std::numeric_limits<int >::max();
+   if (stage >= mStages.size() - 1)
       return 1;
    return mTimeScale;
 }
@@ -186,7 +178,7 @@ int ::ADSR::GetStage(double time, double& stageStartTimeOut) const
 int ::ADSR::GetStage(double time, double& stageStartTimeOut, const EventInfo* e) const
 {
    if (e->mStartTime < 0)
-      return mNumStages;
+      return mStages.size();
 
    int stage = 0;
    stageStartTimeOut = e->mStartTime;
@@ -199,7 +191,7 @@ int ::ADSR::GetStage(double time, double& stageStartTimeOut, const EventInfo* e)
          stageStartTimeOut = e->mStopTime;
       }
 
-      while (time > mStages[stage].time * GetStageTimeScale(stage) + stageStartTimeOut && stage < mNumStages)
+      while (time > mStages[stage].time * GetStageTimeScale(stage) + stageStartTimeOut && stage < mStages.size())
       {
          stageStartTimeOut += mStages[stage].time * GetStageTimeScale(stage);
          ++stage;
@@ -214,7 +206,7 @@ int ::ADSR::GetStage(double time, double& stageStartTimeOut, const EventInfo* e)
 bool ::ADSR::IsDone(double time) const
 {
    double dummy;
-   return GetStage(time, dummy) == mNumStages;
+   return GetStage(time, dummy) == mStages.size();
 }
 
 namespace
@@ -230,15 +222,15 @@ void ::ADSR::SaveState(FileStreamOut& out)
    out << dummy;
    out << mSustainStage;
    out << mMaxSustain;
-   out << mNumStages;
+   out << static_cast<int>(mStages.size());
    out << mHasSustainStage;
    out << mFreeReleaseLevel;
-   out << MAX_ADSR_STAGES;
-   for (int i = 0; i < MAX_ADSR_STAGES; ++i)
+   out << static_cast<int>(mStages.size());
+   for (auto& mStage : mStages)
    {
-      out << mStages[i].curve;
-      out << mStages[i].target;
-      out << mStages[i].time;
+      out << mStage.curve;
+      out << mStage.target;
+      out << mStage.time;
    }
    out << mTimeScale;
 }
@@ -253,17 +245,17 @@ void ::ADSR::LoadState(FileStreamIn& in)
    in >> dummy;
    in >> mSustainStage;
    in >> mMaxSustain;
-   in >> mNumStages;
+   int idummy;
+   in >> idummy; // Was mNumStages; which was removed.
    in >> mHasSustainStage;
    in >> mFreeReleaseLevel;
    int maxNumStages;
    in >> maxNumStages;
-   assert(maxNumStages == MAX_ADSR_STAGES);
    for (int i = 0; i < maxNumStages; ++i)
    {
-      in >> mStages[i].curve;
-      in >> mStages[i].target;
-      in >> mStages[i].time;
+      float curve, target, time;
+      in >> curve >> target >> time;
+      mStages.emplace_back(target, time, curve);
    }
 
    if (rev >= 1)

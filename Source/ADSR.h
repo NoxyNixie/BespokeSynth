@@ -29,8 +29,6 @@
 #include <array>
 #include "OpenFrameworksPort.h"
 
-#define MAX_ADSR_STAGES 20
-
 class FileStreamOut;
 class FileStreamIn;
 
@@ -39,6 +37,13 @@ class ADSR
 public:
    struct Stage
    {
+      Stage(float target, float time, float curve)
+      : target(target)
+      , time(time)
+      , curve(curve)
+      {}
+      Stage() = default;
+
       float target{ 0 };
       float time{ 1 };
       float curve{ 0 };
@@ -95,12 +100,18 @@ public:
    void SetMaxSustain(float max) { mMaxSustain = max; }
    void SetSustainStage(int stage) { mSustainStage = stage; }
    bool IsDone(double time) const;
-   bool IsStandardADSR() const { return mNumStages == 3 && mSustainStage == 1; }
+   bool IsStandardADSR() const { return mStages.size() == 3 && mSustainStage == 1; }
    float GetStartTime(double time) const { return GetEventConst(time)->mStartTime; }
    float GetStopTime(double time) const { return GetEventConst(time)->mStopTime; }
 
-   int GetNumStages() const { return mNumStages; }
-   void SetNumStages(int num) { mNumStages = CLAMP(num, 1, MAX_ADSR_STAGES); }
+   int GetNumStages() const { return mStages.size(); }
+   void SetNumStages(int num)
+   {
+      while (num > mStages.size())
+         mStages.emplace_back();
+      while (num < mStages.size())
+         mStages.pop_back();
+   }
    Stage& GetStageData(int stage) { return mStages[stage]; }
    int GetStage(double time, double& stageStartTimeOut) const;
    int GetStage(double time, double& stageStartTimeOut, const EventInfo* e) const;
@@ -129,7 +140,6 @@ private:
    int mSustainStage{ 0 };
    float mMaxSustain{ -1 };
    std::vector<Stage> mStages;
-   int mNumStages{ 0 };
    bool mHasSustainStage{ false };
    bool mFreeReleaseLevel{ false };
    float mTimeScale{ 1 };
