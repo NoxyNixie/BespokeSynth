@@ -115,6 +115,8 @@ public:
    Stage& GetStageData(int stage) { return mStages[stage]; }
    int GetStage(double time, double& stageStartTimeOut) const;
    int GetStage(double time, double& stageStartTimeOut, const EventInfo* e) const;
+   void AddStage(float target, float time, float curve);
+   void AddStage();
 
    float GetTimeScale() const { return mTimeScale; }
 

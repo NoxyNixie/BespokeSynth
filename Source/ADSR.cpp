@@ -163,10 +163,19 @@ float ::ADSR::Value(double time, const EventInfo* e) const
 
 float ::ADSR::GetStageTimeScale(int stage) const
 {
-   constexpr int  tt = std::numeric_limits<int >::max();
    if (stage >= mStages.size() - 1)
       return 1;
    return mTimeScale;
+}
+
+void ADSR::AddStage(float target, float time, float curve)
+{
+   mStages.emplace_back(target, time, curve);
+}
+
+void ADSR::AddStage()
+{
+   mStages.emplace_back();
 }
 
 int ::ADSR::GetStage(double time, double& stageStartTimeOut) const
@@ -191,7 +200,7 @@ int ::ADSR::GetStage(double time, double& stageStartTimeOut, const EventInfo* e)
          stageStartTimeOut = e->mStopTime;
       }
 
-      while (time > mStages[stage].time * GetStageTimeScale(stage) + stageStartTimeOut && stage < mStages.size())
+      while (stage < mStages.size() && time > mStages[stage].time * GetStageTimeScale(stage) + stageStartTimeOut)
       {
          stageStartTimeOut += mStages[stage].time * GetStageTimeScale(stage);
          ++stage;

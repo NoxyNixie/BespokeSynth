@@ -118,6 +118,7 @@ public:
 
 protected:
    ~EnvelopeEditor();
+   void SyncUIControls();
 
 private:
    void OnClicked(float x, float y, bool right) override;
